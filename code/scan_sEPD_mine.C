@@ -7,6 +7,7 @@
 #include "TFile.h"
 #include "draw_scan.C"
 #include "yjUtility.h"
+void make_sEPD_rootfile_v3(TString inputFileName, TString cap, int ttt = 32);
 
 void make_sEPD_rootfile_v1(TString inputFileName, TString cap, int ttt = 32);
 // void isSourceOnTopOfTheTile(const int tile, const double xorigin, const double yorigin, const double rot); //to_be_updated
@@ -920,7 +921,8 @@ void scan_middle(bool makeRootFile = true){
 }
 
 void scan_middle_y(bool makeRottFile = true){
-  string fname[2] = {"20220214-1625_LineScan_OUTPUT_tile9_xpos23.0.txt", "20220214-1630_LineScan_OUTPUT_tile8_xpos23.0.txt"};
+  string fname[2] =
+      {"20220214-1625_LineScan_OUTPUT_tile9_xpos23.0.txt", "20220214-1630_LineScan_OUTPUT_tile8_xpos23.0.txt"};
 
   gStyle->SetOptStat(0);
   SetyjPadStyle();
@@ -1096,7 +1098,7 @@ void scan_sEPD_mine(bool makeRootFile = true){
       make_sEPD_rootfile_v1("../data/20220131-1540_middlescan.txt", cap);
     }
     if(version == 12){
-      make_sEPD_rootfile_v1("../data/20220218-1858_sector1_Full.txt", cap);
+      make_sEPD_rootfile_v3("../data/20220218-1858_sector1_Full.txt", cap);
     }
     else if(version == 7){
       make_sEPD_rootfile_v1("20220121-1054_TEST_OUTPUT_x7to15_y15to23_dx2_dy2.txt",cap);//v7
@@ -1145,31 +1147,32 @@ void scan_sEPD_mine(bool makeRootFile = true){
   TH1D* h1D_imon[nTILE];//imon dist for all source positions including dark current
   TH1D* h1D_imon_dc[nTILE];//imon dist for only for dark current
 
-  const float xMin = 3.0;
-  const float xMax = 100.0;
-  const float yMin = 0.0;
-  const float yMax = 50.0;
-  float nSep_x = .25;//x bin width in cm
-  float nSep_y = .25;//y bin width in cm
+  const double xMin = 3;
+  const double xMax = 95;
+  const double yMin = 0.0;
+  const double yMax = 49.0;
+  double nSep_x = .25;//x bin width in cm
+  double nSep_y = .25;//y bin width in cm
   //float nSep_y = 0.25;//y bin width in cm
-  int nx = 368;
-  int ny = 196;
+  int nx = (xMax - xMin)/nSep_x;
+  int ny = (yMax - yMin)/nSep_y;
   cout<<"bins: "<<nx<<" , "<<ny<<endl;
-  TH2D* h2D_x_y_imon_all = new TH2D(Form("h2D_x_y_imon_%s", "all"), ";x [cm];y [cm]", nx, xMin, xMin + nx*nSep_x, ny, yMin, yMin+ny*nSep_y);//source x,y position map for all source positions, to check the total scanning map
+  TH2D* h2D_x_y_imon_all = new TH2D(Form("h2D_x_y_imon_%s", "all"), ";x [cm];y [cm]", nx + 1, xMin - 0.125, xMin + nx*nSep_x + 0.125, ny + 1, yMin - 0.125, yMin+ny*nSep_y + 0.125);//source x,y position map for all source positions, to check the total scanning map
   TH2D* h2D_x_y_imon[nTILE];//imon response (z-axis) as a function of source x, y positions for each tile separately.
-
+  TGraph *g_all_locs[nTILE];
   for(int it = 0; it < nTILE; it++){
-    h2D_x_y_imon[it] = new TH2D(Form("h2D_x_y_imon_tile%d", it), ";x [cm];y [cm]", nx, xMin, xMin + nx*nSep_x, ny, yMin, yMin+ny*nSep_y);
+    g_all_locs[it] = new TGraph();
+    h2D_x_y_imon[it] = new TH2D(Form("h2D_x_y_imon_tile%d", it), ";x [cm];y [cm]", nx, xMin, xMax, ny, yMin, yMax);
     h1D_imon[it] = new TH1D(Form("h1D_imon_tile%d", it), ";SiPM current (IMON) [#muA];", 2000, 0, 20.000);
     h1D_imon_dc[it] = new TH1D(Form("h1D_imon_darkCurrent_tile%d", it), ";SiPM current (IMON) [#muA];", 2000, 0, 20.000);
   }
 
   /////////////////////////////////////
   // EVENT LOOP
-  ULong64_t nEntries = inTree_p->GetEntries();
-  ULong64_t nDiv = TMath::Max((ULong64_t)1, nEntries/100);
+  int nEntries = inTree_p->GetEntries();
+  int nDiv = TMath::Max((int)1, nEntries/100);
   std::cout << "Total number of scan steps = " << nEntries << std::endl;
-  for(ULong64_t entry = 0; entry < nEntries; ++entry){
+  for(int entry = 0; entry < nEntries; entry++){
     if(nEntries%nDiv == 0) std::cout << " Entry " << entry << "/" << nEntries << std::endl;
     inTree_p->GetEntry(entry);
     for(int it = 0; it<tile->size(); it++){
@@ -1196,15 +1199,18 @@ void scan_sEPD_mine(bool makeRootFile = true){
   /////////////////////////////////////
   // EVENT LOOP
 
-  for(ULong64_t entry = 0; entry < nEntries; ++entry){
+  for(int entry = 0; entry < nEntries; entry++){
     if(nEntries%nDiv == 0) std::cout << " Entry " << entry << "/" << nEntries << std::endl;
     inTree_p->GetEntry(entry);
-
+    g_all_locs[0]->Set(g_all_locs[0]->GetN() + 1);
+    g_all_locs[0]->SetPoint(g_all_locs[0]->GetN() - 1, xpos, ypos);
     for(int it = 0; it<tile->size(); it++){
       double imonTemp = imon->at(it);
       h1D_imon[tile->at(it)]->Fill(imonTemp);//imon dist for all source positions including dark current
 
       if(!(xpos==3 && ypos==0)){//for dark current
+        g_all_locs[tile->at(it)]->Set(g_all_locs[tile->at(it)]->GetN() + 1);
+        g_all_locs[tile->at(it)]->SetPoint(g_all_locs[tile->at(it)]->GetN() - 1, xpos, ypos);
         h2D_x_y_imon_all->Fill(xpos, ypos, (imonTemp/5.)/32.);
         h2D_x_y_imon[tile->at(it)]->Fill(xpos, ypos, imonTemp/5. - mean_dc[tile->at(it)]/5.);
       }
@@ -1350,59 +1356,6 @@ void scan_sEPD_mine(bool makeRootFile = true){
   drawText("#bf{sPHENIX} #it{Internal}",xPos + 0.1,yPos,0, 1, fontSize+2, fontType);
   drawText("Peak signal of tile above dark current",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
   cg->SaveAs(Form("%s/figures/full_scan/s01_switch/CompareHeights.png",savedir.Data()));
-  ///////////////////////////////////////
-  //// DRAW PLOTS 2D IMON IN TWO CANVAS
-  //cout << "Plotting x-y imon weighted 2D histograms for each channel in TWO canvas" << endl;
-  //xPos = 0.10;
-  //yPos = 0.86;
-  //yPos2 = 0.25;
-
-  //TCanvas* c_2d_3[2];
-  //for(int i=0; i<2;i++){
-  //  c_2d_3[i] = new TCanvas(Form("c_2d_3_canPos%d",i),"", 750*2,400*2);
-  //  c_2d_3[i]->Divide(4,4, 0.0, 0.0);
-  //  c_2d_3[i]->SetLeftMargin(0);
-  //  c_2d_3[i]->SetRightMargin(0);
-  //  c_2d_3[i]->SetBottomMargin(0);
-  //  c_2d_3[i]->SetTopMargin(0);
-  //  for(int j=0; j<16;j++){
-  //    c_2d_3[i]->cd(j+1);
-  //    gPad->SetLeftMargin(0.1);
-  //    gPad->SetRightMargin(0.1);
-  //    gPad->SetBottomMargin(0.2);
-  //    gPad->SetTopMargin(0.01);
-  //  }
-
-  //  // makeMultiPanelCanvas(c_2d_3[i], 4, 4, 0.02, 0.04, 0.02, 0.05, 0.1, 0.2, 0.1);
-  //}
-  //for(int it = 1; it < nTILE; it++){
-  //  int canPos = 0;
-  //  if(it>16) canPos = 1;
-  //  if(it<=16)
-  //    c_2d_3[canPos]->cd(it);
-  //  else
-  //    c_2d_3[canPos]->cd(it-16);
-
-  //  h2D_x_y_imon[it]->Draw("colz");
-  //  h2D_x_y_imon[it]->SetTitleOffset(0.5, "Y");
-  //  h2D_x_y_imon[it]->SetTitleOffset(3.3, "X");
-
-  //  if(it==1)
-  //    draw_scan(it, xorigin, yorigin, rot);
-  //  else if(it!=1 && it%2==0)
-  //    draw_scan(it+1, xorigin, yorigin, rot);
-  //  else if(it!=1 && it%2==1)
-  //    draw_scan(it-1, xorigin, yorigin, rot);
-
-  //  drawText(Form("Tile ##bf{%d}", it),xPos,yPos-dy2*2,0, 1, fontSize, fontType);
-  //  drawText(Form("Background-subtracted current%s",""),xPos,yPos2,0, 1, fontSize, fontType);
-
-  //}
-  //c_2d_3[1]->cd(16);
-  //drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
-  //drawText("sEPD s01",xPos,yPos-dy2,0, 1, fontSize, fontType);
-  //c_2d_3[0]->SaveAs(Form("%s/figures/hist2D_x_y_IMON%s_inTwoCanvas_tile1to16.pdf",savedir.Data(),cap.Data()));
-  //c_2d_3[1]->SaveAs(Form("%s/figures/hist2D_x_y_IMON%s_inTwoCanvas_tile17to31.pdf",savedir.Data(),cap.Data()));
 
   /////////////////////////////////////
   // DRAW PLOTS 1D IMON FOR EACH TILE
@@ -1523,6 +1476,8 @@ void scan_sEPD_mine(bool makeRootFile = true){
   //h1D_mean->Write();
   //h1D_rms->Write();
   //fout->Close();
+  TCanvas *ccc = new TCanvas("ccc","", 500, 500);
+  g_all_locs[0]->Draw("AP");
 }
 
 void GetParameters(vector<string> &paramNames, vector<string> &params, TString inputFileName = "20220131-1540_middlescan.txt", TString cap=""){
@@ -1573,6 +1528,100 @@ void GetParameters(vector<string> &paramNames, vector<string> &params, TString i
 
 // void isSourceOnTopOfTheTile(const int tile = 8, const double xorigin = 96., const double yorigin = 25., const double rot = 3*TMath::Pi()/2){
 // }
+
+void make_sEPD_rootfile_v3(TString inputFileName = "20220113-1447_TEST_OUTPUT.txt", TString cap="", int ttt = 32){
+
+  cout << "RUNNING: make_sEPD_rootfile_v3 for " << inputFileName << " input file" << endl;
+
+  ifstream infile(Form("../data/%s", inputFileName.Data()));
+  Float_t xpos, ypos;
+  vector<Int_t> device;
+  vector<Int_t> ch;
+  vector<Int_t> tile;
+  vector<Float_t> imon, rmon, vcomp;
+
+  /////////////////////////////////////
+  // DEFINE TREE AND OUTPUT ROOT FILE
+  TString fname = Form("../data/sEPD%s.root",cap.Data());
+  TFile* fout = new TFile(Form("%s",fname.Data()), "recreate");
+  TTree* tr = new TTree("sEPDTree", "");
+  tr->Branch("xpos", &xpos, "xpos/F");
+  tr->Branch("ypos", &ypos, "xpos/F");
+  tr->Branch("device", &device);
+  tr->Branch("channel", &ch);
+  tr->Branch("tile", &tile);
+  tr->Branch("imon", &imon);
+  tr->Branch("rmon", &rmon);
+  tr->Branch("vcomp", &vcomp);
+
+  /////////////////////////////////////
+  // IMPORT NUMBERS FROM THE TXT FILE
+  Long64_t nLines = 0;
+  Bool_t isDiffPosition = false;
+  Float_t xpos_temp = 3;
+  Float_t ypos_temp = 0;
+  while (infile)
+  {
+    string s;
+    if (!getline( infile, s )) break;
+    if (s.empty()) continue;
+    if (!isdigit(s.at(0))) continue;
+
+    istringstream ss( s );
+    vector<string> vec_str;
+
+    while (ss)
+    {
+      string stemp;
+      if (!getline( ss, stemp, ',' )) break;
+      vec_str.push_back( stemp );
+    }
+
+    if(vec_str.size()==9){
+      xpos_temp = stof(vec_str[4]);
+      ypos_temp = stof(vec_str[5]);
+      if (!(xpos_temp == xpos && ypos_temp == ypos)){
+        tr->Fill();
+        device.clear();
+        ch.clear();
+        tile.clear();
+        imon.clear();
+        rmon.clear();
+        vcomp.clear();
+        xpos = xpos_temp;
+        ypos = ypos_temp;
+      }
+      else {
+        xpos = xpos_temp;
+        ypos = ypos_temp;
+      }
+      device.push_back(stoi(vec_str[0]));
+      ch.push_back(stoi(vec_str[1]));
+      tile.push_back(stoi(vec_str[2]));
+      imon.push_back(stof(vec_str[6]));
+      rmon.push_back(stof(vec_str[7]));
+      vcomp.push_back(stof(vec_str[8]));
+      nLines++;
+    }
+
+    // if(tile.size() == ttt){
+    //   tr->Fill();
+    //   device.clear();
+    //   ch.clear();
+    //   tile.clear();
+    //   imon.clear();
+    //   rmon.clear();
+    //   vcomp.clear();
+    // }
+  }
+
+  cout << "total numer of lines analyzed = " << nLines << endl;
+  fout->cd();
+  tr->Write("", TObject::kOverwrite);
+  delete tr;
+  fout->Close();
+  cout << "DONE: " << fname << " has been created" << endl;
+}
 
 void make_sEPD_rootfile_v1(TString inputFileName = "20220113-1447_TEST_OUTPUT.txt", TString cap="", int ttt = 32){
 
@@ -1634,7 +1683,7 @@ void make_sEPD_rootfile_v1(TString inputFileName = "20220113-1447_TEST_OUTPUT.tx
       nLines++;
     }
 
-    if(tile.size()==ttt){
+    if(tile.size() == ttt){
       tr->Fill();
       device.clear();
       ch.clear();
