@@ -603,14 +603,22 @@ void Middle_Scan_Test(string fname = "../data/20220216-2045_line_1_switch_sipm.t
   //string fname = "../data/20220217-1755_line_1_orig_sipm.txt";
   bool no_av = true;
   bool normalize = false;
+  bool use_one = false;
+  bool use_two = !use_one && true;
   char *date = new char[50];
   char *test = new char[50];
   char *addon = new char[50];
   int sector;
   ParseFileName(fname, date, test, sector, addon);
-
+  string dir = "s01_V65";
+  /*
+  bool special = true;
+  if (sector < 10 && special) dir = Form("s0%d_%s", sector, addon);
+  else if (sector < 10) dir = Form("s0%d", sector);
+  else if (sector >= 10 && special) dir = Form("s%d_%s", sector, addon);
+  else dir = Form("s%d",sector);
   //string fname = "../data/20220209-1601_TEST_OUTPUT.txt";
-
+*/
   TString cap = Form("%s_%s_%d",date, test, sector);
   make_sEPD_rootfile_v1(fname, cap);
   TFile* fin = new TFile(Form("../data/sEPD%s.root",cap.Data()), "read");
@@ -668,12 +676,7 @@ void Middle_Scan_Test(string fname = "../data/20220216-2045_line_1_switch_sipm.t
   cout<< "nsteps : "<<nsteps<<endl;
   cout<< "nRep : "<<nRep<<endl;
   //nRep = 10.;
-  string dir;
-  bool special = false;
-  if (sector < 10 && special) dir = Form("s0%d_%s", sector, addon);
-  else if (sector < 10) dir = Form("s0%d", sector);
-  else if (sector >= 10 && special) dir = Form("s%d_%s", sector, addon);
-  else Form("s%d",sector);
+
 
   cout<< "Destination directory for all the stuff: ../data/"<<dir<<endl;
   int NTILE = 32;
@@ -746,14 +749,16 @@ void Middle_Scan_Test(string fname = "../data/20220216-2045_line_1_switch_sipm.t
   for(int it = 0; it < NTILE; it++){
       mean_dc[it] = h1_tile_dc[it]->GetMean();
       rms_dc[it] = h1_tile_dc[it]->GetRMS();
+      if (use_two){
+        mean_dc[it] = h1_tile_dc2[it]->GetMean();
+        rms_dc[it] = h1_tile_dc2[it]->GetRMS();
+      }
       mean_dc2[it] = h1_tile_dc2[it]->GetMean();
       rms_dc2[it] = h1_tile_dc2[it]->GetRMS();
-      if (no_av){
-        mean_dc2[it] = h1_tile_dc[it]->GetMean();
-        rms_dc2[it] = h1_tile_dc[it]->GetRMS();
-      }
+
       slope_dc[it] = (mean_dc2[it] - mean_dc[it])/(xfinalcm - xorigincm);
-      if (slope_dc[it] < 0) slope_dc[it] = 0;
+      if (no_av) slope_dc[it] = 0;
+  //    if (slope_dc[it] < 0) slope_dc[it] = 0;
     //}
     printf("Tile %d: %f +/- %f -> %f +/- %f = %f\n", it, mean_dc[it], rms_dc[it], mean_dc2[it], rms_dc2[it], slope_dc[it]);
     nScanCount[it] = 0;
