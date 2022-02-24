@@ -30,11 +30,11 @@ void ParseFileName( string fname, char *date, char *test, int &sector, char *add
   cout<<fname<<endl;
   while ((pos2 = fname.find(delimiter2)) != std::string::npos) {
       token = fname.substr(0, pos2);
-      std::cout << token << std::endl;
-      cout<<"IF"<<endl;
       if ( n == 0 ) strcpy(date, token.c_str());
       else if ( n == 1 ) strcpy(test, token.c_str());
-      else if ( n == 2 ) sector = stoi(token);
+      else if ( n == 2 ) {
+        sector = stoi(token);
+      }
       n++;
       fname.erase(0, pos2 + delimiter2.length());
   }
@@ -710,6 +710,7 @@ void make_sEPD_rootfile_v2(TString inputFileName = "20220113-1447_TEST_OUTPUT.tx
   tr->Branch("channel", &ch);
   tr->Branch("tile", &tile);
   tr->Branch("imon", &imon);
+  tr->Branch("rmon", &rmon);
 
   /////////////////////////////////////
   // IMPORT NUMBERS FROM THE TXT FILE
@@ -726,7 +727,7 @@ void make_sEPD_rootfile_v2(TString inputFileName = "20220113-1447_TEST_OUTPUT.tx
 
     istringstream ss( s );
     vector<string> vec_str;
-    //printf(" %s \n", ss);
+    //printf(" %s \n", s.c_str());
     while (ss)
     {
       string stemp;
@@ -742,6 +743,18 @@ void make_sEPD_rootfile_v2(TString inputFileName = "20220113-1447_TEST_OUTPUT.tx
       ypos = stof(vec_str[6]);
       time.push_back(stof(vec_str[7]));
       imon.push_back(stof(vec_str[8]));
+      nLines++;
+    }
+    if(vec_str.size()==10){
+      device.push_back(stoi(vec_str[0]));
+      ch.push_back(stoi(vec_str[1]));
+      tile.push_back(stoi(vec_str[2]));
+      xpos = stof(vec_str[5]);
+      ypos = stof(vec_str[6]);
+      time.push_back(stof(vec_str[7]));
+      imon.push_back(stof(vec_str[8]));
+      rmon.push_back(stof(vec_str[9]));
+
       nLines++;
     }
     if (xpos == 0 && ypos == 0){
