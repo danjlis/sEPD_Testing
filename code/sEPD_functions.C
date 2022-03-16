@@ -40,6 +40,33 @@ void ParseFileName( string fname, char *date, char *test, int &sector, char *add
   }
 
 }
+
+void AddALine(vector<TLine> *lines, int i, int j, double b_cx, double b_wx, double b_cy, double b_wy){
+
+  if ( i != 0 && j != 0 ) return;
+  if ( i == 0 && j == 0 ) return;
+
+  double x1, x2, y1, y2;
+  if (i == 0){
+    x1 = b_cx - b_wx/2;
+    x2 = b_cx + b_wx/2;
+    y1 = b_cy + j*b_wy/2;
+    y2 = y1;
+  }
+  else if (j == 0){
+    y1 = b_cy - b_wy/2;
+    y2 = b_cy + b_wy/2;
+    x1 = b_cx + i*b_wx/2;
+    x2 = x1;
+  }
+  else return;
+  TLine *a = new TLine(x1, x2, y1, y2);
+  a->SetLineWidth(1);
+  a->SetLineColor(kRed);
+  lines->push_back(*a);
+  return;
+}
+
 void draw_ex(int tile = 7, double norm = 1, Option_t *option = "hist"){
 
   string file = Form("EX_tile%d/Tile%d_data.csv", tile, tile);
@@ -453,8 +480,10 @@ void draw_scan(const int tile = 8, const double xorigin = 96., const double yori
       if(line_matrix[i][j] > 0 ){
         line = new TLine(point_x[i], point_y[i], point_x[j], point_y[j]);
         line->SetLineWidth(2);
-        for (std::vector<int>::iterator k = line_red[tile - 1].begin(); k != line_red[tile - 1].end(); ++k){
-          if (line_matrix[i][j] == *k) innit = true;
+        if (tile > 0){
+          for (std::vector<int>::iterator k = line_red[tile - 1].begin(); k != line_red[tile - 1].end(); ++k){
+            if (line_matrix[i][j] == *k) innit = true;
+          }
         }
         if (innit) line->SetLineColor(kRed);
         else line->SetLineColor(kBlack);

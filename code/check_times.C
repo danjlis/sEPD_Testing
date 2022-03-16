@@ -9,12 +9,13 @@ void check_times(){
   double ysteplengthcm = .5;
 
   double time_per_stop_per_rep = 1./180.;
+  double time_per_empty = .1/360.;
   double n_rep = 3;
   double total_time = 0;
 
   double yskiplengthcm = 20.0;
   double xskiplengthcm = 70.0;
-  double xp = 87.5;
+  double xp = 90;
   double yp = 0;
   double s = (yp - 20.5)/(xp - 3);
   double ymiddlecm = 22.0;
@@ -40,6 +41,7 @@ void check_times(){
        if (skip) {
          g_out->Set(g_out->GetN()+1);
          g_out->SetPoint(g_out->GetN()-1, xpos, ypos);
+         total_time = total_time + time_per_empty;
        }
        else {
          g_in->Set(g_in->GetN()+1);
@@ -47,6 +49,7 @@ void check_times(){
          total_time = total_time + n_rep*time_per_stop_per_rep;
        }
     }
+    //total_time = total_time + ysteps*time_per_empty;
   }
   cout<<"Total steps taken: "<<g_in->GetN()<<" / "<<g_in->GetN() + g_out->GetN()<<endl;
   cout<<"Total Time is "<<total_time<<" hours or "<<total_time/24.<<" days..."<<endl;

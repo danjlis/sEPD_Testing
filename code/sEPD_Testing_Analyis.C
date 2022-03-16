@@ -610,7 +610,7 @@ void Middle_Scan_Test(string fname = "../data/20220216-2045_line_1_switch_sipm.t
   char *addon = new char[50];
   int sector;
   ParseFileName(fname, date, test, sector, addon);
-  string dir = "s01_V65";
+  string dir = "s01_V65_2fans";
   /*
   bool special = true;
   if (sector < 10 && special) dir = Form("s0%d_%s", sector, addon);
@@ -1253,7 +1253,7 @@ void Middle_Scan_Y_Test(bool makeRottFile = true){
   h1_tile_response_8->Draw("hist same");
 }
 
-void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", bool makeRootFile = true){
+void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", int sector = 0, bool makeRootFile = true){
 
   gStyle->SetOptStat(0);
   SetyjPadStyle();
@@ -1310,7 +1310,9 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
   int nx = (xMax - xMin)/nSep_x;
   int ny = (yMax - yMin)/nSep_y;
   cout<<"bins: "<<nx<<" , "<<ny<<endl;
-  TH2D* h2D_x_y_imon_all = new TH2D(Form("h2D_x_y_imon_%s", "all"), ";x [cm];y [cm]", nx + 1, xMin - 0.125, xMin + nx*nSep_x + 0.125, ny + 1, yMin - 0.125, yMin+ny*nSep_y + 0.125);//source x,y position map for all source positions, to check the total scanning map
+  TH2D* h2D_x_y_imon_all_norm = new TH2D(Form("h2D_x_y_imon_%s", "all_norm"), ";x [cm];y [cm]", nx, xMin, xMax, ny, yMin, yMax);
+
+  TH2D* h2D_x_y_imon_all = new TH2D(Form("h2D_x_y_imon_%s", "all"), ";x [cm];y [cm]", nx, xMin, xMax, ny, yMin, yMax);
   TH2D* h2D_x_y_imon[nTILE];//imon response (z-axis) as a function of source x, y positions for each tile separately.
   TGraph *g_all_locs[nTILE];
   for(int it = 0; it < nTILE; it++){
@@ -1364,15 +1366,96 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
       if(!(xpos==3 && ypos==0)){//for dark current
         g_all_locs[tile->at(it)]->Set(g_all_locs[tile->at(it)]->GetN() + 1);
         g_all_locs[tile->at(it)]->SetPoint(g_all_locs[tile->at(it)]->GetN() - 1, xpos, ypos);
-        h2D_x_y_imon_all->Fill(xpos, ypos, (imonTemp/5.)/32.);
         h2D_x_y_imon[tile->at(it)]->Fill(xpos, ypos, imonTemp/5. - mean_dc[tile->at(it)]/5.);
       }
     }//tile
   }//event loop
 
+  // Loop through all the bins and get the max;
+  int n_bins_x = h2D_x_y_imon_all->GetNbinsX();
+  int n_bins_y = h2D_x_y_imon_all->GetNbinsY();
+
+  int max_t;
+  double max_v = 0;
+  TH2D *h2d_max_tile = new TH2D("h2d_max_tile", "", nx, xMin, xMax, ny, yMin, yMax);
+  int b;
+  double v;
+  double norm;
+  for ( int i = 1 ; i <= n_bins_x; i++){
+    for ( int j = 1; j <= n_bins_y; j++){
+      max_v = 0;
+      b = h2D_x_y_imon_all->GetBin(i, j);
+      for ( int k = 1; k < 32; k++){
+        v = h2D_x_y_imon[k]->GetBinContent(b);
+        if ( v > max_v){
+          max_v = v;
+          max_t = k;
+        }
+      }
+      norm = h2D_x_y_imon[max_t]->GetBinContent(h2D_x_y_imon[max_t]->GetMaximumBin());
+      h2d_max_tile->SetBinContent(b, max_t);
+      h2D_x_y_imon_all->SetBinContent(b, max_v);
+      h2D_x_y_imon_all_norm->SetBinContent(b, max_v/norm);
+
+    }
+  }
+
+  // vector<TLine> *lines;
+  // int t;
+  // int t2, b2, v2;
+  // int st_x, end_x, st_y, end_y;
+  // double b_cx, b_wx, b_cy, b_wy;
+  // double et = 0.1;
+  // for (int i = 0; i < n_bins_x; i++ ){
+  //   for (int j = 0; j < n_bins_y; j++){
+  //     b = h2d_max_tile->GetBin(i, j);
+  //     t = h2d_max_tile->GetBinContent(b);
+  //     v = h2D_x_y_imon_all->GetBinContent(b);
+  //     if ( v < et ) continue;
+  //     if ( i == 1){
+  //       st_x = 0;
+  //       end_x = 1;
+  //     }
+  //     else if ( i == n_bins_x){
+  //       st_x = -1;
+  //       end_x = 0;
+  //     }
+  //     else {
+  //       st_y = -1;
+  //       end_y = 1;
+  //     }
+  //     if ( j == 1){
+  //       st_y = 0;
+  //       end_y = 1;
+  //     }
+  //     else if ( j == n_bins_y){
+  //       st_y = -1;
+  //       end_y = 0;
+  //     }
+  //     else {
+  //       st_y = -1;
+  //       end_y = 1;
+  //     }
+  //     for (int ii = st_x ; ii <= end_x ; ii++){
+  //       for (int jj = st_y ; jj < end_y ; jj++){
+  //         b2 = h2d_max_tile->GetBin(i + ii, j + jj);
+  //         t2 = h2d_max_tile->GetBinContent(b2);
+  //         v2 = h2D_x_y_imon_all->GetBinContent(b2);
+  //         if (t2 != t || v2 < et){
+  //           b_cx = h2d_max_tile->GetXaxis()->GetBinCenter(i);
+  //           b_wx = h2d_max_tile->GetXaxis()->GetBinWidth(i)/2;
+  //           b_cx = h2d_max_tile->GetYaxis()->GetBinCenter(j);
+  //           b_wx = h2d_max_tile->GetYaxis()->GetBinWidth(j)/2;
+  //
+  //           AddALine(lines, ii, jj, b_cx, b_wx, b_cy, b_wy);
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
   /////////////////////////////////////
   // START DRAWING
-  TString savedir = "../data/";
+  TString savedir = Form("s%d", sector);
   float xPos = 0.12;
   //float xPos = 0.85;
   float yPos = 0.86;
@@ -1401,10 +1484,9 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
   h2D_x_y_imon_all->Draw("colz");
   draw_scan(1, xorigin, yorigin, rot);
   drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
-  drawText("sEPD s01",xPos,yPos-dy2,0, 1, fontSize, fontType);
-  drawText("SiPM Switched",xPos,yPos-3*dy2,0, 1, fontSize, fontType);
+  drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
 
-  c_2d_2->SaveAs(Form("%s/figures/full_scan/s01_switch/hist2D_x_y_IMON%s_allChannel.pdf",savedir.Data(),cap.Data()));
+  c_2d_2->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_allChannel.pdf",savedir.Data(),cap.Data()));
 
   /////////////////////////////////////
   // DRAW PLOTS 2D IMON
@@ -1432,15 +1514,50 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
       draw_scan(it-1, xorigin, yorigin, rot);
 
     drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
-    drawText("sEPD s01",xPos,yPos-dy2,0, 1, fontSize, fontType);
+    drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
     drawText(Form("Tile ##bf{%d}", it),xPos,yPos-dy2*2,0, 1, fontSize, fontType);
     drawText(Form("Dark Current %0.2f #mu A", mean_dc[it]),xPos,yPos-dy2*3,0, 1, fontSize, fontType);
     drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-    c_2d_1->SaveAs(Form("%s/figures/full_scan/s01_switch/hist2D_x_y_IMON%s_tile%d.pdf",savedir.Data(),cap.Data(),it));
-    c_2d_1->SaveAs(Form("%s/figures/full_scan/s01_switch/hist2D_x_y_IMON%s_tile%d.png",savedir.Data(),cap.Data(),it));
-
+    c_2d_1->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_tile%d.pdf",savedir.Data(),cap.Data(),it));
+    c_2d_1->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_tile%d.png",savedir.Data(),cap.Data(),it));
   }
+
+  TCanvas *c_all = new TCanvas("c_all","c_all", 740, 400);
+  c_all->SetRightMargin(0.13);
+  c_all->SetLeftMargin(0.10);
+  SetHistTextSize(h2D_x_y_imon_all);
+  h2D_x_y_imon_all->SetTitleOffset(0.8, "Y");
+
+  h2D_x_y_imon_all->Draw("colz");
+//  draw_scan(0, xorigin, yorigin, rot);
+
+  drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
+  drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
+  drawText("All tiles",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
+  drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
+
+  c_all->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_all.pdf",savedir.Data(),cap.Data()));
+  c_all->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_all.png",savedir.Data(),cap.Data()));
+
+  TCanvas *c_all_norm = new TCanvas("c_all_norm","c_all_norm", 740, 400);
+  c_all_norm->SetRightMargin(0.13);
+  c_all_norm->SetLeftMargin(0.10);
+  SetHistTextSize(h2D_x_y_imon_all_norm);
+  h2D_x_y_imon_all_norm->SetTitleOffset(0.8, "Y");
+
+  h2D_x_y_imon_all_norm->Draw("colz");
+  //  draw_scan(0, xorigin, yorigin, rot);
+
+  drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
+  drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
+  drawText("All tiles Normalized",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
+  drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
+
+  c_all_norm->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_all_norm.pdf",savedir.Data(),cap.Data()));
+  c_all_norm->SaveAs(Form("../data/figures/full_scan/%s/hist2D_x_y_IMON%s_all_norm.png",savedir.Data(),cap.Data()));
+
+
   TCanvas *cg = new TCanvas("cg","cg");
   TGraph *gg = new TGraph(31, tilesss, max_tile);
   gg->SetMarkerSize(2);
@@ -1452,7 +1569,7 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
   gg->Draw("AP");
   drawText("#bf{sPHENIX} #it{Internal}",xPos + 0.1,yPos,0, 1, fontSize+2, fontType);
   drawText("Peak signal of tile above dark current",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
-  cg->SaveAs(Form("%s/figures/full_scan/s01_switch/CompareHeights.png",savedir.Data()));
+  cg->SaveAs(Form("../data/figures/full_scan/%s/CompareHeights.png",savedir.Data()));
 
   /////////////////////////////////////
   // DRAW PLOTS 1D IMON FOR EACH TILE
@@ -1486,10 +1603,10 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
     gPad->SetLogy();
 
     drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,1, 1, fontSize+2, fontType);
-    drawText("sEPD s01",xPos,yPos-dy2,1, 1, fontSize, fontType);
+    drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,1, 1, fontSize, fontType);
     drawText(Form("Tile ##bf{%d}", it),xPos,yPos-dy2*2,1, 1, fontSize, fontType);
 
-    c_1d_1[it]->SaveAs(Form("%s/figures/full_scan/s01_switch/hist1D_IMON%s_tile%d.pdf",savedir.Data(),cap.Data(),it));
+    c_1d_1[it]->SaveAs(Form("../data/figures/full_scan/%s/hist1D_IMON%s_tile%d.pdf",savedir.Data(),cap.Data(),it));
   }
 
   /////////////////////////////////////
@@ -1524,11 +1641,11 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
   c_1d_2->cd(nTILE+1-1);
   xPos = 0.2;
   drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
-  drawText("sEPD s01",xPos,yPos-dy2,0, 1, fontSize, fontType);
+  drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
   // drawText(Form("With {}^{90}_{38}Sr on CH##color[%d]{%d}",col,ch_s),xPos,yPos-dy2*2,0, 1, fontSize, fontType);
   // drawText("#splitline{(CH# does not}{ match to tile #)}",xPos,yPos-dy2*3.5,0, 1, fontSize, fontType);
 
-  c_1d_2->SaveAs(Form("%s/figures/full_scan/s01_switch/hist1D_IMON%s_allChannels.pdf",savedir.Data(),cap.Data()));
+  c_1d_2->SaveAs(Form("../data/figures/full_scan/%s/hist1D_IMON%s_allChannels.pdf",savedir.Data(),cap.Data()));
 
   /////////////////////////////////////
   // DRAW PLOTS 1D IMON Dark Current FOR EACH TILE
@@ -1557,10 +1674,10 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", boo
   c_1d_3->cd(nTILE+1-1);
   xPos = 0.2;
   drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
-  drawText("sEPD s01",xPos,yPos-dy2,0, 1, fontSize, fontType);
+  drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
   drawText("Dark Current",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
 
-  c_1d_3->SaveAs(Form("%s/figures/full_scan/s01_switch/hist1D_IMON_darkCurrent%s_allChannels.pdf",savedir.Data(),cap.Data()));
+  c_1d_3->SaveAs(Form("../data/figures/full_scan/%s/hist1D_IMON_darkCurrent%s_allChannels.pdf",savedir.Data(),cap.Data()));
 
 
   ///////////////////////////////////////
