@@ -1257,12 +1257,12 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", int
 
   gStyle->SetOptStat(0);
   SetyjPadStyle();
+  time_t now = time(0);
 
-  /////////////////////////////////////
-  // Match version and the text file name
-  int version = 12;
-  TString cap = Form("_v%d", version);
-  make_sEPD_rootfile_v3(fname, cap);
+  tm *ltm = localtime(&now);
+  TString tlist = Form("%d-%d%d-%d%d%d",1900+ltm->tm_year,1+ ltm->tm_month, ltm->tm_day, 5+ltm->tm_hour, 30+ltm->tm_min, ltm->tm_sec);
+  TString cap = Form("_%s", tlist);
+  TString rootname = make_sEPD_rootfile_v3(fname);
 //  char *date = new char[50];
 //  char *test = new char[50];
 //  char *addon = new char[50];
@@ -1400,59 +1400,6 @@ void Full_Scan_Test(string fname = "../data/20220218-1858_sector1_Full.txt", int
     }
   }
 
-  // vector<TLine> *lines;
-  // int t;
-  // int t2, b2, v2;
-  // int st_x, end_x, st_y, end_y;
-  // double b_cx, b_wx, b_cy, b_wy;
-  // double et = 0.1;
-  // for (int i = 0; i < n_bins_x; i++ ){
-  //   for (int j = 0; j < n_bins_y; j++){
-  //     b = h2d_max_tile->GetBin(i, j);
-  //     t = h2d_max_tile->GetBinContent(b);
-  //     v = h2D_x_y_imon_all->GetBinContent(b);
-  //     if ( v < et ) continue;
-  //     if ( i == 1){
-  //       st_x = 0;
-  //       end_x = 1;
-  //     }
-  //     else if ( i == n_bins_x){
-  //       st_x = -1;
-  //       end_x = 0;
-  //     }
-  //     else {
-  //       st_y = -1;
-  //       end_y = 1;
-  //     }
-  //     if ( j == 1){
-  //       st_y = 0;
-  //       end_y = 1;
-  //     }
-  //     else if ( j == n_bins_y){
-  //       st_y = -1;
-  //       end_y = 0;
-  //     }
-  //     else {
-  //       st_y = -1;
-  //       end_y = 1;
-  //     }
-  //     for (int ii = st_x ; ii <= end_x ; ii++){
-  //       for (int jj = st_y ; jj < end_y ; jj++){
-  //         b2 = h2d_max_tile->GetBin(i + ii, j + jj);
-  //         t2 = h2d_max_tile->GetBinContent(b2);
-  //         v2 = h2D_x_y_imon_all->GetBinContent(b2);
-  //         if (t2 != t || v2 < et){
-  //           b_cx = h2d_max_tile->GetXaxis()->GetBinCenter(i);
-  //           b_wx = h2d_max_tile->GetXaxis()->GetBinWidth(i)/2;
-  //           b_cx = h2d_max_tile->GetYaxis()->GetBinCenter(j);
-  //           b_wx = h2d_max_tile->GetYaxis()->GetBinWidth(j)/2;
-  //
-  //           AddALine(lines, ii, jj, b_cx, b_wx, b_cy, b_wy);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
   /////////////////////////////////////
   // START DRAWING
   TString savedir = Form("s%d", sector);
