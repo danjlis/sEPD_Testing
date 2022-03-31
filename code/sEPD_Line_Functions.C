@@ -435,18 +435,24 @@ void GetChannels(std::string fname, std::vector<int> &channels, bool debug = fal
   }
   c1 = stoi(cc1);
   c2 = stoi(fname);
+  if (debug) cout<<"Adding channels..."<<endl;
 
   if (c1 == 1){
     int c = c2;
     while (c - c1 > 0){
       channels.push_back(c);
-      c - 2;
+      if (debug) cout<<c<<",";
+
+      c = c - 2;
     }
+    channels.push_back(c1);
   }
   else if ((c1%2 == 0 && c2%2==1) || (c1%2 == 1 && c2%2 == 0)){
     channels.push_back(c1);
     channels.push_back(c2);
+    if (debug) cout<<"Adding channels..."<<endl;
   }
+  cout<<"... done."<<endl;
 
   return;
 }

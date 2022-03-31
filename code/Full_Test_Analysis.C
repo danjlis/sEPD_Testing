@@ -15,77 +15,36 @@
 //#include "draw_scan.C"
 #include "yjUtility.h"
 #include "sEPD_functions.C"
-#include "sEPD_Line_Functions"
+#include "sEPD_Full_Functions.C"
 // Line Scan Analysis code
-
-void Analyze(std::vector<std::string> *filenames, const std::string data_dir, const std::string save_dir_raw, const std::string save_dir_plot, const std::string save_dir_root, int ch1, int ch2, int ch3, int ch4, bool debug){
-
-  //code for full test analysis
+void Analyze(std::string filename, const int sector, const std::string data_dir, const std::string save_dir_raw, const std::string save_dir_plot, const std::string save_dir_root, const int ch_1 = 0, const int ch_2 = 0, const int ch_3 = 0, const int ch_4 = 0, bool debug = true)
+{
 
   gStyle->SetOptStat(0);
-  int size = filenames.size();
+  SetyjPadStyle();
+  int size = 1;
   std::vector<int> channels;
+  int n_channels = 0;
+  if (ch_1 > 0){
+    GetChannels(filename, channels, debug);
+    n_channels = channels.size();
+  }
+  std::string fname;
+  fname = MakeRootFile_Full(filename, data_dir, save_dir_raw, n_channels, debug);
   char *sector_addon = new char[5];
   if (sector < 10) sprintf(sector_addon, "s0%d", sector);
   else sprintf(sector_addon,"s%d", sector);
-  cout<< "Destination directory for all the stuff: "<<save_dir_raw<<endl;
-  int ncc;
-  std::vector<int> ncc_vec = {};
-
-  if (ch4 > 0){
-    if (debug) cout<<"Doing the Full Scan for "<<ch1<<", "<<ch2<<", "<<ch3<<", and "<<ch4<<"..."<<endl;
-    ncc = 4;
-    ncc_vec.push_back(ch1);
-    ncc_vec.push_back(ch2);
-    ncc_vec.push_back(ch3);
-    ncc_vec.push_back(ch4);
-
-  }
-  else if (ch3 > 0){
-    if (debug) cout<<"Doing the Full Scan for "<<ch1<<", "<<ch2<<", and "<<ch3<<"..."<<endl;
-    ncc = 3;
-    ncc_vec.push_back(ch1);
-    ncc_vec.push_back(ch2);
-    ncc_vec.push_back(ch3);
-
-  }
-  else if (ch2 > 0){
-    if (debug) cout<<"Doing the Full Scan for "<<ch1<<" and "<<ch2<<"..."<<endl;
-    ncc = 2;
-    ncc_vec.push_back(ch1);
-    ncc_vec.push_back(ch2);
-
-  }
-  else if (ch1 > 0){
-    if (debug) cout<<"Doing the Full Scan for "<<ch1<<"..."<<endl;
-    ncc = 1;
-    ncc_vec.push_back(ch1);
-  }
-  else{
-    if (debug) cout<<"Doing the Entire Full Scan..."<<endl;
-    ncc = 0;
-  }
 
 
-  std::string fname;
-  fname = MakeRootFile_Full(filenames.at(0), data_dir, save_dir_raw, n_channels, debug);
-  /////////////////////////////////////
-  // IMPORT THE TREE FROM ROOT FILE
-
-  if (debug){
-    cout<<"Made Root File"<<endl;
-  }
   char *root_path = new char[100];
   sprintf(root_path, "%s%s.root", save_dir_raw.c_str(), fname.c_str());
   TFile* fin = new TFile(root_path, "read");
   if(!fin){
     cout<<"No File Found here"<<endl;
-    continue;
   }
   TTree* inTree_p = (TTree*) fin ->Get("sEPDTree");
   if(!inTree_p){
     cout<<"No TTree found here..."<<endl;
-    continue;
   }
   Float_t xpos, ypos;
   vector<Int_t>* ch=nullptr;
@@ -110,11 +69,11 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   double yfinalcm;
   double yorigincm;
   double ystepcm;
-  int nsx, nsy;
+  int nsteps;
   double nRep;
   std::string data_path = "/" + fname + ".txt";
   if (debug) cout<< "Getting Parameters from file..."<<data_path<<endl;
-  GetParameters_Line(paramNames, params, data_path, data_dir, debug);
+  GetParameters_Full(paramNames, params, data_path, data_dir, debug);
   if (debug) cout << "Done getting info: "<<params.size()<<endl;
   for ( int i = 0; i < params.size(); i++){
     cout<<paramNames[i]<<" : "<<params[i]<<endl;
@@ -129,17 +88,7 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
     if (paramNames[i] == " nRepeat" || paramNames[i] == "nRepeat") nRep = stof(params[i]);
 
   }
-  int nsx = 100/xstepcm;
-  int nsy = 50/ystepcm;
-  cout<<"Parameters: "<<endl;
-  cout<< "xorigincm : "<<xorigincm<<endl;
-  cout<< "yorigincm : "<<yorigincm<<endl;
-  cout<< "xfinalcm : "<<xfinalcm<<endl;
-  cout<< "yfinalcm : "<<yfinalcm<<endl;
-  cout<< "xsteplengthcm : "<<xstepcm<<endl;
-  cout<< "ysteplengthcm : "<<ystepcm<<endl;
-  cout<< "nsteps : "<<nsx<<" by " <<nsy<<endl;
-  cout<< "nRep : "<<nRep<<endl;
+
 
   /////////////////////////////////////
   // DEFINE HISTOGRAMS
@@ -153,11 +102,12 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   const double xMin = 3;
   const double xMax = 95;
   const double yMin = 0.0;
-  const double yMax = 50.0;
-
+  const double yMax = 49.0;
+  double nSep_x = .5;//x bin width in cm
+  double nSep_y = .5;//y bin width in cm
   //float nSep_y = 0.25;//y bin width in cm
-  nx = (xMax - xMin)/xstepcm;
-  ny = (yMax - yMin)/ystepcm;
+  int nx = (xMax - xMin)/nSep_x;
+  int ny = (yMax - yMin)/nSep_y;
   cout<<"bins: "<<nx<<" , "<<ny<<endl;
   TH2D* h2D_x_y_imon_all_norm = new TH2D(Form("h2D_x_y_imon_%s", "all_norm"), ";x [cm];y [cm]", nx, xMin, xMax, ny, yMin, yMax);
 
@@ -176,14 +126,14 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   int nEntries = inTree_p->GetEntries();
   int nDiv = TMath::Max((int)1, nEntries/100);
   std::cout << "Total number of scan steps = " << nEntries << std::endl;
-  for(int entry = 0; entry < nEntries; entry++){
+  for(int entry = 0; entry < 3; entry++){
     if(nEntries%nDiv == 0) std::cout << " Entry " << entry << "/" << nEntries << std::endl;
     inTree_p->GetEntry(entry);
     for(int it = 0; it<tile->size(); it++){
       double imonTemp = imon->at(it);
-      if(xpos==xo && ypos==yo){//for dark current
+      //if(xpos==xo && ypos==yo){//for dark current
         h1D_imon_dc[tile->at(it)]->Fill(imonTemp);
-      }
+    //  }
     }//tile
   }//event loop
   /////////////////////////////////////
@@ -203,6 +153,7 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   /////////////////////////////////////
   // EVENT LOOP
 
+  if(debug) cout<<__LINE__<<": Going through event loop..."<<endl;
   for(int entry = 0; entry < nEntries; entry++){
     if(nEntries%nDiv == 0) std::cout << " Entry " << entry << "/" << nEntries << std::endl;
     inTree_p->GetEntry(entry);
@@ -215,10 +166,11 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
       if(!(xpos==3 && ypos==0)){//for dark current
         g_all_locs[tile->at(it)]->Set(g_all_locs[tile->at(it)]->GetN() + 1);
         g_all_locs[tile->at(it)]->SetPoint(g_all_locs[tile->at(it)]->GetN() - 1, xpos, ypos);
-        h2D_x_y_imon[tile->at(it)]->Fill(xpos, ypos, imonTemp/5. - mean_dc[tile->at(it)]/5.);
+        h2D_x_y_imon[tile->at(it)]->Fill(xpos, ypos, imonTemp/3. - mean_dc[tile->at(it)]/3.);
       }
     }//tile
   }//event loop
+  if(debug) cout<<__LINE__<<": All of the hists..."<<endl;
 
   // Loop through all the bins and get the max;
   int n_bins_x = h2D_x_y_imon_all->GetNbinsX();
@@ -236,11 +188,17 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
       b = h2D_x_y_imon_all->GetBin(i, j);
       for ( int k = 1; k < 32; k++){
         v = h2D_x_y_imon[k]->GetBinContent(b);
+        if(debug) cout<<"value: "<<v<<endl;
+
         if ( v > max_v){
           max_v = v;
           max_t = k;
+          if(debug) cout<<"new max: "<<max_t<<endl;
+
         }
       }
+      if (max_v == 0) continue;
+      if(debug) cout<<"At normalizing..."<<endl;
       norm = h2D_x_y_imon[max_t]->GetBinContent(h2D_x_y_imon[max_t]->GetMaximumBin());
       h2d_max_tile->SetBinContent(b, max_t);
       h2D_x_y_imon_all->SetBinContent(b, max_v);
@@ -248,6 +206,8 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
 
     }
   }
+
+  if(debug) cout<<__LINE__<<": Drawing..."<<endl;
 
   /////////////////////////////////////
   // START DRAWING
@@ -281,13 +241,15 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
   drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
 
-  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel.pdf",save_dir_plot.Data());
+  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel.pdf",save_dir_plot.c_str()));
+  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel.png",save_dir_plot.c_str()));
 
   /////////////////////////////////////
   // DRAW PLOTS 2D IMON
   cout << "Plotting x-y imon weighted 2D histograms for each tile" << endl;
 
   TCanvas* c_2d_1 = new TCanvas("c_2d_1_tile","", 750,400);
+
   for(int it = 1; it < nTILE; it++){
     c_2d_1->SetRightMargin(0.13);
     c_2d_1->SetLeftMargin(0.10);
@@ -314,8 +276,8 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
     drawText(Form("Dark Current %0.2f #mu A", mean_dc[it]),xPos,yPos-dy2*3,0, 1, fontSize, fontType);
     drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d.pdf",save_dir_plot,it));
-    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d.png",ssave_dir_plot,it));
+    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d.pdf",save_dir_plot.c_str(),it));
+    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d.png",save_dir_plot.c_str(),it));
   }
 
   TCanvas *c_all = new TCanvas("c_all","c_all", 740, 400);
@@ -332,8 +294,8 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   drawText("All tiles",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
   drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all.pdf",save_dir_plot));
-  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all.png",save_dir_plot));
+  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all.pdf",save_dir_plot.c_str()));
+  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all.png",save_dir_plot.c_str()));
 
   TCanvas *c_all_norm = new TCanvas("c_all_norm","c_all_norm", 740, 400);
   c_all_norm->SetRightMargin(0.13);
@@ -349,8 +311,8 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   drawText("All tiles Normalized",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
   drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm.pdf",save_dir_plot));
-  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm.png",save_dir_plot));
+  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm.pdf",save_dir_plot.c_str()));
+  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm.png",save_dir_plot.c_str()));
 
 
   TCanvas *cg = new TCanvas("cg","cg");
@@ -364,7 +326,8 @@ void Analyze(std::vector<std::string> *filenames, const std::string data_dir, co
   gg->Draw("AP");
   drawText("#bf{sPHENIX} #it{Internal}",xPos + 0.1,yPos,0, 1, fontSize+2, fontType);
   drawText("Peak signal of tile above dark current",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
-  cg->SaveAs(Form("%s/CompareHeights.png",save_dir_plot));
+  cg->SaveAs(Form("%s/CompareHeights.png",save_dir_plot.c_str()));
+
 
   return;
 }
@@ -379,23 +342,26 @@ int Full_Test_Analysis(const std::string &config_file= "full_config.config")
   const int ch3 = config_p->GetValue("CHANNEL3", 0);
   const int ch4 = config_p->GetValue("CHANNEL4", 0);
 
-  std::string sec_head;
-  if (sector < 10) sec_head = "s0" + sector;
-  else sec_head = "s" + sector;
+  char *sec_head = new char[10];
+  if (sector < 10) sprintf(sec_head, "s0%d", sector);
+  else sprintf(sec_head,"s%d", sector);
 
-  const std::string data_dir = "../data/" + sec_head;
-  const std::string save_dir_root = "../Results/"+sec_head+"/root_hist/";
-  const std::string save_dir_plot = "../Results/"+sec_head+"/plots/";
-  const std::string save_dir_raw = "../Results/"+sec_head+"/root_raw/";
+  const std::string data_dir = "../data/" + std::string(sec_head);
+  const std::string save_dir_root = "../Results/"+std::string(sec_head)+"/root_hist/";
+  const std::string save_dir_plot = "../Results/"+std::string(sec_head)+"/plots/";
+  const std::string save_dir_raw = "../Results/"+std::string(sec_head)+"/root_raw/";
 
-  std::vector<std::string> *filenames;
-
-  GetFileName(filenames, sector, all_runs, ch1, ch2, ch3, ch4);
-
+  bool debug = true;
+  std::vector<std::string> filenames;
+  int all_runs = 1;
+  std::string test_type = "full";
+  GetFileName(filenames, test_type, sector, all_runs, ch1, ch2, ch3, ch4, debug);
+  std::string filename = filenames.at(0);
+  cout<<"File: "<<filename<<endl;
   // Now we have out file names
 
   // analyze the data
-  Analyze(filenames, data_dir, save_dir_raw, save_dir_plot, save_dir_root, ch1, ch2, ch3, ch4);
+  Analyze(filename, sector, data_dir, save_dir_raw, save_dir_plot, save_dir_root, ch1, ch2, ch3, ch4, debug);
 
   return 1;
 }

@@ -28,9 +28,9 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
   cout<< "Destination directory for all the stuff: "<<save_dir_raw<<endl;
 
 
-  for (int i = 0; i < size; i++){
+  for (int ff = 0; ff < size; ff++){
     channels.clear();
-    if (debug) cout<<"In Directory: "<<filenames.at(i)<<endl;
+    if (debug) cout<<"In Directory: "<<filenames.at(ff)<<endl;
     // for ( int i = 0; i < NTILE; i++ ){
     //   h1_tile_dc[i]->Reset();
     //   h1_temp_scan[i]->Reset();
@@ -55,9 +55,9 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     // }
 
 
-    cout<<"Line Scan "<<i<<"...."<<endl;
+    cout<<"Line Scan "<<ff<<"...."<<endl;
     // Make the root file and save it to save_dir_raw
-    GetChannels(filenames.at(i), channels, debug);
+    GetChannels(filenames.at(ff), channels, debug);
     int n_channels = channels.size();
 
     if (true) {
@@ -68,7 +68,7 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
       cout<< ". "<<endl;
     }
     std::string fname;
-    fname = MakeRootFile_Line(filenames.at(i), data_dir, save_dir_raw, n_channels, debug);
+    fname = MakeRootFile_Line(filenames.at(ff), data_dir, save_dir_raw, n_channels, debug);
     if (debug){
       cout<<"Made Root File"<<endl;
     }
@@ -375,6 +375,7 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
       h1_all_rmon[i]->Write();
       h1_all_imon[i]->Write();
     }
+    if (debug) cout<<"End file "<<ff<<endl;
   }
   return;
 }
