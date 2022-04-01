@@ -25,8 +25,9 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
   char *sector_addon = new char[5];
   if (sector < 10) sprintf(sector_addon, "s0%d", sector);
   else sprintf(sector_addon,"s%d", sector);
-  cout<< "Destination directory for all the stuff: "<<save_dir_raw<<endl;
+  if (debug) cout<< "Destination directory for all the stuff: "<<save_dir_raw<<endl;
 
+  TH2D *h2D_crosstalk = new TH2D("h2D_crosstalk","",31, 0.5, 31.5, 31, 0.5, 31.5);
 
   for (int ff = 0; ff < size; ff++){
     channels.clear();
@@ -55,7 +56,7 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     // }
 
 
-    cout<<"Line Scan "<<ff<<"...."<<endl;
+    if (debug) cout<<"Line Scan "<<ff<<"...."<<endl;
     // Make the root file and save it to save_dir_raw
     GetChannels(filenames.at(ff), channels, debug);
     int n_channels = channels.size();
@@ -112,9 +113,11 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     std::string data_path = "/" + fname + ".txt";
     if (debug) cout<< "Getting Parameters from file..."<<data_path<<endl;
     GetParameters_Line(paramNames, params, data_path, data_dir, debug);
-    if (debug) cout << "Done getting info: "<<params.size()<<endl;
-    for ( int i = 0; i < params.size(); i++){
-      cout<<paramNames[i]<<" : "<<params[i]<<endl;
+    if (debug) {
+      cout << "Done getting info: "<<params.size()<<endl;
+      for ( int i = 0; i < params.size(); i++){
+        cout<<paramNames[i]<<" : "<<params[i]<<endl;
+      }
     }
     for (int i = 0; i < paramNames.size(); i++){
       if (paramNames[i] == "xorigincm" || paramNames[i] == " xorigincm") xorigincm = stof(params[i]);
@@ -145,16 +148,17 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     }
 
     nsteps = floor((finalcm - origincm)/stepcm);
-    cout<<"Parameters: "<<endl;
-    cout<< "xorigincm : "<<xorigincm<<endl;
-    cout<< "yorigincm : "<<yorigincm<<endl;
-    cout<< "xfinalcm : "<<xfinalcm<<endl;
-    cout<< "yfinalcm : "<<yfinalcm<<endl;
-    cout<< "xsteplengthcm : "<<xstepcm<<endl;
-    cout<< "ysteplengthcm : "<<ystepcm<<endl;
-    cout<< "nsteps : "<<nsteps<<endl;
-    cout<< "nRep : "<<nRep<<endl;
-
+    if (debug){
+      cout<<"Parameters: "<<endl;
+      cout<< "xorigincm : "<<xorigincm<<endl;
+      cout<< "yorigincm : "<<yorigincm<<endl;
+      cout<< "xfinalcm : "<<xfinalcm<<endl;
+      cout<< "yfinalcm : "<<yfinalcm<<endl;
+      cout<< "xsteplengthcm : "<<xstepcm<<endl;
+      cout<< "ysteplengthcm : "<<ystepcm<<endl;
+      cout<< "nsteps : "<<nsteps<<endl;
+      cout<< "nRep : "<<nRep<<endl;
+    }
     int NTILE = 32;
     TH1D *h1_tile_dc[NTILE];
     TH1D *h1_tile_dc2[NTILE];
@@ -175,6 +179,7 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
         h1_RMS_on2[i] = new TH1D(Form("h1_RMS_on2_%d", i), "",100, 0.0, 0.025);
         h1_RMS_off2[i] = new TH1D(Form("h1_RMS_off2_%d", i), "",100, 0.0, 0.025);
     }
+
     TProfile *h1_tile_response[NTILE];
     TH2D *h2_tile_rmon_imon[NTILE];
     TProfile *h1_tile_rmon[NTILE];
@@ -356,6 +361,8 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     c_full->SaveAs(Form("%s%s.png", save_dir_plot.c_str(), fname.c_str()));
     c_full->SaveAs(Form("%s%s.pdf", save_dir_plot.c_str(), fname.c_str()));
 
+    FillCrossTalk(h2D_crosstalk, h1_tile_response, ch_1, ch_2);
+
     TFile *out_hist_file = new TFile(Form("%s%s_hists.root", save_dir_root.c_str(), fname.c_str() ), "recreate");
     for (int i = 0; i < NTILE; i++){
       int ns = 0;
@@ -375,14 +382,29 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
       h1_all_rmon[i]->Write();
       h1_all_imon[i]->Write();
     }
+    out_hist_file->Close();
     if (debug) cout<<"End file "<<ff<<endl;
   }
+
+  TCanvas *c_cross = new TCanvas("c_cross","",1000, 1000);
+  gPad->SetLogz();
+  for (int i = 1; i< 32; i++){
+    h2D_crosstalk->Fill(i, i, 1);
+  }
+  h2D_crosstalk->SetTitle(";Read Channel; Source Over Channel");
+  h2D_crosstalk->Draw("colz");
+  c_cross->SaveAs(Form("%s/crosstalk_test.png", save_dir_plot.c_str()));
+  c_cross->SaveAs(Form("%s/crosstalk_test.pdf", save_dir_plot.c_str()));
+
+  TFile *out_hist_file = new TFile(Form("%scrosstalk_hist.root", save_dir_root.c_str()), "recreate");
+  h2D_crosstalk->Write();
+  out_hist_file->Close();
   return;
 }
 
 int Line_Test_Analysis(const std::string &config_file= "line_config.config")
 {
-  bool debug = true;
+  bool debug = false;
   if (debug) cout<< "In the code... Getting config file"<<endl;
 // Input configuration file
   TEnv *config_p = new TEnv(config_file.c_str());

@@ -8,6 +8,81 @@
 #include "TFile.h"
 #include <dirent.h>
 
+void FillCrossTalk(TH2D *h2D_crosstalk, TProfile *h1_tile_response[], int ch_1, int ch_2){
+  bool debug = false;
+  if (debug) cout<<"Crosstalking... "<<ch_1<<"_"<<ch_2<<endl;
+  double integral[32] = {0};
+  int NTILES = 32;
+  int channels[16];
+  double binlength[16];// = {0};
+  int size;
+  if (abs(ch_1 - ch_2) == 1){
+    channels[0] = ch_1;
+    channels[1] = ch_2;
+    size = 2;
+  }
+  else {
+    int c = ch_1;
+    int n = floor((ch_1 - ch_2 + 1)/2.);
+    size = n+1;
+    while (c > ch_2){
+      channels[n] = c;
+      c = c - 2;
+      n = n - 1;
+    }
+    channels[0] = ch_2;
+  }
+
+  if (debug){
+    cout<<"channels: ";
+    for (int i = 0; i < size; i++) cout<<channels[i]<<" ";
+    cout<<" ."<<endl;
+  }
+  double norms[32];
+  double ref[32] = {0};
+  double min = 0.2;
+  double v_ref;
+  for ( int i = 0; i < size; i++){
+    norms[channels[i]] = h1_tile_response[channels[i]]->GetBinContent(h1_tile_response[channels[i]]->GetMaximumBin());
+    for ( int j = 1; j <= h1_tile_response[channels[i]]->GetNbinsX(); j++){
+      v_ref =  h1_tile_response[channels[i]]->GetBinContent(j);
+      if (v_ref > min*norms[channels[i]]) {
+        ref[channels[i]] += v_ref;
+        binlength[i] = binlength[i] + 1.;
+      }
+    }
+  }
+  int nbins;
+  if (debug) cout<<"Ending the crosstalk with: "<<endl;
+  for (int i = 0; i < size;i++){
+    for(int j = 0; j < size;j++){
+      if (i == j) continue;
+      nbins = h1_tile_response[channels[i]]->GetNbinsX();
+      for (int b = 1; b <= nbins; b++){
+        double max = 0;
+        double max_i = 0;
+        double v;
+        for (int k = 1; k < NTILES;k++){
+          v = h1_tile_response[k]->GetBinContent(b);
+          if (v > max){
+            max = v;
+            max_i = k;
+          }
+        }
+        if (max_i != channels[j]) continue;
+        if (max < min*norms[channels[j]]) continue;
+
+        h2D_crosstalk->Fill(channels[i], channels[j], (binlength[i]/binlength[j])*(h1_tile_response[channels[i]]->GetBinContent(b)/ref[channels[i]]));
+      }
+        if (debug) cout<<"Reading "<<channels[i]<<" over "<<channels[j]<<": "<<h2D_crosstalk->GetBinContent(h2D_crosstalk->GetBin(channels[i], channels[j]))<<endl;
+    }
+
+  }
+
+
+
+}
+
 
 std::string ParseFileName(std::string in_file, std::string test_type, int all_runs, int ch_1, int ch_2, bool debug = false){
   char* sector = new char[100];
@@ -277,7 +352,7 @@ std::string MakeRootFile_Full(std::string inputFileName, const std::string datad
 */
 std::string MakeRootFile_Line(std::string inputFileName, const std::string datadir, const std::string savedir, int ttt = 32, bool debug = false){
 
-  cout << "RUNNING: make_sEPD_rootfile_v1 for " << inputFileName << " input file" << endl;
+ if (debug) cout << "RUNNING: make_sEPD_rootfile_v1 for " << inputFileName << " input file" << endl;
   if (debug) {
     cout<<"Printing Parameters: "<<endl;
     cout<<"datadir: "<<datadir<<endl;
@@ -370,12 +445,12 @@ std::string MakeRootFile_Line(std::string inputFileName, const std::string datad
     }
   }
 
-  cout << "total numer of lines analyzed = " << nLines << endl;
+  if (debug) cout << "total numer of lines analyzed = " << nLines << endl;
   fout->cd();
   tr->Write("", TObject::kOverwrite);
   //delete tr;
   fout->Close();
-  cout << "DONE: " <<  rootname << " has been created" << endl;
+  if (debug) cout << "DONE: " <<  rootname << " has been created" << endl;
 
   return fname;
 }
@@ -452,7 +527,7 @@ void GetChannels(std::string fname, std::vector<int> &channels, bool debug = fal
     channels.push_back(c2);
     if (debug) cout<<"Adding channels..."<<endl;
   }
-  cout<<"... done."<<endl;
+  if (debug) cout<<"... done."<<endl;
 
   return;
 }

@@ -17,6 +17,61 @@
 #include "sEPD_functions.C"
 #include "sEPD_Full_Functions.C"
 // Line Scan Analysis code
+
+void GetUniformity(TGraphErrors *g_uni, TH2D *h_imon[], bool debug = true){
+  if (debug) cout<<"In Uniformity..."<<endl;
+  int NTILE = 32;
+  Tile *arr_tile[31];
+  int cheese = TileInfo(arr_tile);
+  int nx, ny, bin;
+  double scale, value, err, norm;
+  double hx, lx, hy, ly;
+  double xloc, yloc;
+  double min = 0.8;
+  TProfile *h_uni_test = new TProfile("h_uni_test","", 31, 0.5, 31.5,"s");
+  for(int i = 1; i < NTILE; i++){
+
+    nx = h_imon[i]->GetNbinsX();
+    ny = h_imon[i]->GetNbinsX();
+    norm = h_imon[i]->GetBinContent(h_imon[i]->GetMaximumBin());
+    hx = arr_tile[i-1]->xc + arr_tile[i-1]->xr;
+    lx = arr_tile[i-1]->xc - arr_tile[i-1]->xr;
+    hy = arr_tile[i-1]->yc + arr_tile[i-1]->yr;
+    ly = arr_tile[i-1]->yc - arr_tile[i-1]->yr;
+
+    if (debug)cout<<"Channel "<<i<<": nx = "<<nx<<", ny = "<<ny<<", norm = "<<norm<<endl;
+    for (int j = 1; j <= nx; j++){
+      for (int k = 1; k <= ny; k++){
+        xloc = h_imon[i]->GetXaxis()->GetBinCenter(j);
+        yloc = h_imon[i]->GetYaxis()->GetBinCenter(k);
+
+        bin = h_imon[i]->GetBin(j, k);
+        value = h_imon[i]->GetBinContent(bin);///norm;
+        if (debug && xloc< hx && xloc > lx && yloc < hy && yloc > ly&& value/norm > min)cout<<"bin "<<bin<<": value = "<<value<<", value/norm = "<<value/norm<<endl;
+
+        if (xloc< hx && xloc > lx && yloc < hy && yloc > ly&& value/norm > min) {
+          //if (debug) cout<<"in it"<<endl;
+          h_uni_test->Fill(i, value);
+        }
+      }
+    }
+    scale = h_uni_test->GetBinContent(i);
+    err = h_uni_test->GetBinError(i);
+
+    g_uni->SetPoint(i, i, 1);
+    g_uni->SetPointError(i, 0,err/scale);
+
+    if (debug)cout<<"bin "<<bin<<": scale= "<<scale<<"rms = "<< err<<endl;
+
+  }
+  g_uni->SetTitle(";tile; Uniformity");
+  g_uni->SetMarkerStyle(22);
+  g_uni->SetMarkerSize(2);
+  g_uni->SetMarkerColor(kBlue);
+  g_uni->GetHistogram()->SetMinimum(0.7);
+  g_uni->GetHistogram()->SetMaximum(1.3);
+  return;
+}
 void Analyze(std::string filename, const int sector, const std::string data_dir, const std::string save_dir_raw, const std::string save_dir_plot, const std::string save_dir_root, const int ch_1 = 0, const int ch_2 = 0, const int ch_3 = 0, const int ch_4 = 0, bool debug = true)
 {
 
@@ -327,6 +382,18 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
   drawText("#bf{sPHENIX} #it{Internal}",xPos + 0.1,yPos,0, 1, fontSize+2, fontType);
   drawText("Peak signal of tile above dark current",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
   cg->SaveAs(Form("%s/CompareHeights.png",save_dir_plot.c_str()));
+
+  TGraphErrors *h_uniformity = new TGraphErrors(31);
+  GetUniformity(h_uniformity, h2D_x_y_imon);
+  gStyle->SetOptTitle(0);
+  TCanvas *c_uni = new TCanvas("c_uni","",500, 500);
+  h_uniformity->Draw("AP");
+  drawText("#bf{sPHENIX} #it{Internal}",xPos + 0.1,yPos,0, 1, fontSize+2, fontType);
+  drawText("Uniformity Test",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
+  drawText("RMS of tile responses above 0.5 #times max response",xPos + 0.1,yPos -2*dy2,0, 1, fontSize+2, fontType);
+
+  c_uni->SaveAs(Form("%s/h_uniformity.pdf",save_dir_plot.c_str()));
+  c_uni->SaveAs(Form("%s/h_uniformity.png",save_dir_plot.c_str()));
 
 
   return;
