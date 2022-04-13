@@ -159,8 +159,12 @@ void Analyze(const int sector, const std::string data_dir, const std::string sav
   return;
 }
 
-void Make_Health_Sheet(const int &sector = 1){
+void Make_Health_Sheet(const int &sector = -1){
 
+  if (sector == -1){
+    cout<<"Enter the sector number!!"<<endl;
+    return;
+  }
   char *sec_head = new char[10];
   if (sector < 10) sprintf(sec_head, "s0%d", sector);
   else sprintf(sec_head,"s%d", sector);
