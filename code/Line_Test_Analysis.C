@@ -28,6 +28,7 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
   if (debug) cout<< "Destination directory for all the stuff: "<<save_dir_raw<<endl;
 
   TH2D *h2D_crosstalk = new TH2D("h2D_crosstalk","",31, 0.5, 31.5, 31, 0.5, 31.5);
+  TFile *out_hist_file = new TFile(Form("%sLine_Test_hists.root", save_dir_root.c_str()), "recreate");
 
   for (int ff = 0; ff < size; ff++){
     channels.clear();
@@ -60,7 +61,8 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     // Make the root file and save it to save_dir_raw
     GetChannels(filenames.at(ff), channels, debug);
     int n_channels = channels.size();
-
+    int ch1 = channels.at(0);
+    int ch2 = channels.at(n_channels - 1);
     if (true) {
       cout<<"Channels scanned: ";
       for (int j = 0; j < n_channels; j++){
@@ -170,14 +172,14 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     TH1D *h1_RMS_off2[NTILE];
 
     for ( int i = 0; i < NTILE; i++ ){
-        h1_tile_dc[i] = new TH1D(Form("h1_tile_dc_%d", i), "",10, 0.1, 0.56);
-        h1_temp_scan[i] = new TH1D(Form("h1_temp_scan_%d", i), "",100, 0.0, 1.0);
-        h1_RMS_scan[i] = new TH1D(Form("h1_RMS_scan_%d", i), ";RMS [#mu A];",100, 0.0, 0.025);
-        h1_RMS_on[i] = new TH1D(Form("h1_RMS_on_%d", i), "",100, 0.0, 0.025);
-        h1_RMS_off[i] = new TH1D(Form("h1_RMS_off_%d", i), "",100, 0.0, 0.025);
-        h1_tile_dc2[i] = new TH1D(Form("h1_tile_dc2_%d", i), "",10, 0.1, 0.6);
-        h1_RMS_on2[i] = new TH1D(Form("h1_RMS_on2_%d", i), "",100, 0.0, 0.025);
-        h1_RMS_off2[i] = new TH1D(Form("h1_RMS_off2_%d", i), "",100, 0.0, 0.025);
+        h1_tile_dc[i] = new TH1D(Form("h1_tile_dc_%d_%d_ch%d",ch1, ch2, i), "",10, 0.1, 0.56);
+        h1_temp_scan[i] = new TH1D(Form("h1_temp_scan_%d_%d_ch%d",ch1, ch2, i), "",100, 0.0, 1.0);
+        h1_RMS_scan[i] = new TH1D(Form("h1_RMS_scan_%d_%d_ch%d",ch1, ch2, i), ";RMS [#mu A];",100, 0.0, 0.025);
+        h1_RMS_on[i] = new TH1D(Form("h1_RMS_on_%d_%d_ch%d",ch1, ch2, i), "",100, 0.0, 0.025);
+        h1_RMS_off[i] = new TH1D(Form("h1_RMS_off_%d_%d_ch%d", i), "",100, 0.0, 0.025);
+        h1_tile_dc2[i] = new TH1D(Form("h1_tile_dc2_%d_%d_ch%d",ch1, ch2, i), "",10, 0.1, 0.6);
+        h1_RMS_on2[i] = new TH1D(Form("h1_RMS_on2_%d_%d_ch%d",ch1, ch2, i), "",100, 0.0, 0.025);
+        h1_RMS_off2[i] = new TH1D(Form("h1_RMS_off2_%d_%d_ch%d",ch1, ch2, i), "",100, 0.0, 0.025);
     }
 
     TProfile *h1_tile_response[NTILE];
@@ -187,10 +189,10 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     TGraph *h1_all_rmon[NTILE];
     TGraph *h1_all_imon[NTILE];
     for (int i = 0; i < NTILE; i++){
-      h1_tile_response[i] = new TProfile(Form("h1_tile_response_%d", i), "", nsteps+1, origincm-stepcm/2, finalcm+stepcm/2);
-      h2_tile_rmon_imon[i] = new TH2D(Form("h2_tile_rmon_imon_%d", i), "", 50, 55, 61, 60, 0.0, 1.2);
-      h1_tile_rmon[i] = new TProfile(Form("h1_tile_rmon_%d", i), "", nsteps+1, origincm-stepcm/2, finalcm+stepcm/2);
-      h1_tile_rmon_1[i] = new TH1D(Form("h1_tile_rmon_1_%d", i), "", 100, 47, 70);
+      h1_tile_response[i] = new TProfile(Form("h1_tile_response_%d_%d_ch%d",ch1, ch2, i), "", nsteps+1, origincm-stepcm/2, finalcm+stepcm/2);
+      h2_tile_rmon_imon[i] = new TH2D(Form("h2_tile_rmon_imon_%d_%d_ch%d",ch1, ch2, i), "", 50, 55, 61, 60, 0.0, 1.2);
+      h1_tile_rmon[i] = new TProfile(Form("h1_tile_rmon_%d_%d_ch%d",ch1, ch2, i), "", nsteps+1, origincm-stepcm/2, finalcm+stepcm/2);
+      h1_tile_rmon_1[i] = new TH1D(Form("h1_tile_rmon_1_%d_%d_ch%d",ch1, ch2, i), "", 100, 47, 70);
       h1_all_rmon[i] = new TGraph();
       h1_all_imon[i] = new TGraph();
     }
@@ -357,13 +359,18 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
     drawText(Form("sEPD %s Crosstalk Test", sector_addon),xPos,yPos-dy2,0, 1, fontSize, fontType);
     drawText(Form("Channels %d to %d",ch_1, ch_2),xPos,yPos-2*dy2,0, 1, fontSize, fontType);
     //drawText("SiPM Switched",xPos,yPos-3*dy2,0, 1, fontSize, fontType);
+    out_hist_file->cd();
 
+    if (oo > 2){
+      cout<<"HERE"<<endl;
+      if (ch_1 == 30 || ch_2 == 30) c_full->SetName("c_full_even");
+      else if (ch_1 == 31 || ch_2 == 31) c_full->SetName("c_full_odd");
+      c_full->Write();
+    }
     c_full->SaveAs(Form("%s%s.png", save_dir_plot.c_str(), fname.c_str()));
     c_full->SaveAs(Form("%s%s.pdf", save_dir_plot.c_str(), fname.c_str()));
 
     FillCrossTalk(h2D_crosstalk, h1_tile_response, ch_1, ch_2);
-
-    TFile *out_hist_file = new TFile(Form("%s%s_hists.root", save_dir_root.c_str(), fname.c_str() ), "recreate");
     for (int i = 0; i < NTILE; i++){
       int ns = 0;
       int oo = 0;
@@ -382,7 +389,6 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
       h1_all_rmon[i]->Write();
       h1_all_imon[i]->Write();
     }
-    out_hist_file->Close();
     if (debug) cout<<"End file "<<ff<<endl;
   }
 
@@ -395,8 +401,7 @@ void Analyze(std::vector<std::string> &filenames, const int sector, const std::s
   h2D_crosstalk->Draw("colz");
   c_cross->SaveAs(Form("%s/crosstalk_test.png", save_dir_plot.c_str()));
   c_cross->SaveAs(Form("%s/crosstalk_test.pdf", save_dir_plot.c_str()));
-
-  TFile *out_hist_file = new TFile(Form("%scrosstalk_hist.root", save_dir_root.c_str()), "recreate");
+  out_hist_file->cd();
   h2D_crosstalk->Write();
   out_hist_file->Close();
   return;

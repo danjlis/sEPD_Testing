@@ -296,8 +296,8 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
   drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
   drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
 
-  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel.pdf",save_dir_plot.c_str()));
-  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel.png",save_dir_plot.c_str()));
+  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel_%s.pdf",save_dir_plot.c_str(), sector_addon));
+  c_2d_2->SaveAs(Form("%s/hist2D_x_y_IMON_allChannel_%s.png",save_dir_plot.c_str(), sector_addon));
 
   /////////////////////////////////////
   // DRAW PLOTS 2D IMON
@@ -331,8 +331,8 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
     drawText(Form("Dark Current %0.2f #mu A", mean_dc[it]),xPos,yPos-dy2*3,0, 1, fontSize, fontType);
     drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d.pdf",save_dir_plot.c_str(),it));
-    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d.png",save_dir_plot.c_str(),it));
+    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d_%s.pdf",save_dir_plot.c_str(),it, sector_addon));
+    c_2d_1->SaveAs(Form("%s/hist2D_x_y_IMON_tile%d_%s.png",save_dir_plot.c_str(),it, sector_addon));
   }
 
   TCanvas *c_all = new TCanvas("c_all","c_all", 740, 400);
@@ -349,8 +349,8 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
   drawText("All tiles",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
   drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all.pdf",save_dir_plot.c_str()));
-  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all.png",save_dir_plot.c_str()));
+  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all_%s.pdf",save_dir_plot.c_str(), sector_addon));
+  c_all->SaveAs(Form("%s/hist2D_x_y_IMON_all_%s.png",save_dir_plot.c_str(), sector_addon));
 
   TCanvas *c_all_norm = new TCanvas("c_all_norm","c_all_norm", 740, 400);
   c_all_norm->SetRightMargin(0.13);
@@ -362,12 +362,12 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
   //  draw_scan(0, xorigin, yorigin, rot);
 
   drawText("#bf{sPHENIX} #it{Internal}",xPos,yPos,0, 1, fontSize+2, fontType);
-  drawText(Form("sEPD s%d", sector),xPos,yPos-dy2,0, 1, fontSize, fontType);
+  drawText(Form("sEPD %s", sector_addon),xPos,yPos-dy2,0, 1, fontSize, fontType);
   drawText("All tiles Normalized",xPos,yPos-dy2*2,0, 1, fontSize, fontType);
   drawText("<I>_{scan} - <I>_{dark} w/ source at (x, y)",xPos,yPos2,0, 1, fontSize, fontType);
 
-  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm.pdf",save_dir_plot.c_str()));
-  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm.png",save_dir_plot.c_str()));
+  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm_%s.pdf",save_dir_plot.c_str(), sector_addon));
+  c_all_norm->SaveAs(Form("%s/hist2D_x_y_IMON_all_norm_%s.png",save_dir_plot.c_str(), sector_addon));
 
 
   TCanvas *cg = new TCanvas("cg","cg");
@@ -381,7 +381,7 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
   gg->Draw("AP");
   drawText("#bf{sPHENIX} #it{Internal}",xPos + 0.1,yPos,0, 1, fontSize+2, fontType);
   drawText("Peak signal of tile above dark current",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
-  cg->SaveAs(Form("%s/CompareHeights.png",save_dir_plot.c_str()));
+  cg->SaveAs(Form("%s/CompareHeights_%s.png",save_dir_plot.c_str(), sector_addon));
 
   TGraphErrors *h_uniformity = new TGraphErrors(31);
   GetUniformity(h_uniformity, h2D_x_y_imon);
@@ -392,10 +392,25 @@ void Analyze(std::string filename, const int sector, const std::string data_dir,
   drawText("Uniformity Test",xPos + 0.1,yPos -dy2,0, 1, fontSize+2, fontType);
   drawText("RMS of tile responses above 0.5 #times max response",xPos + 0.1,yPos -2*dy2,0, 1, fontSize+2, fontType);
 
-  c_uni->SaveAs(Form("%s/h_uniformity.pdf",save_dir_plot.c_str()));
-  c_uni->SaveAs(Form("%s/h_uniformity.png",save_dir_plot.c_str()));
+  c_uni->SaveAs(Form("%s/h_uniformity_%s.pdf",save_dir_plot.c_str(), sector_addon));
+  c_uni->SaveAs(Form("%s/h_uniformity_%s.png",save_dir_plot.c_str(), sector_addon));
 
+  TFile *out_hist_file = new TFile(Form("%s%s_hists.root", save_dir_root.c_str(), fname.c_str() ), "recreate");
+  for (int i = 1; i < 32; i++){
+    g_all_locs[i]->Write();
+    h2D_x_y_imon[i]->Write();
+    h1D_imon[i]->Write();
+    h1D_imon_dc[i]->Write();
+  }
+  h2D_x_y_imon_all_norm->Write();
+  h2D_x_y_imon_all->Write();
+  out_hist_file->Close();
 
+  TFile *health = new TFile(Form("%shealth_hist.root", save_dir_root.c_str(), fname.c_str() ), "recreate");
+  h_uniformity->SetName("h_uniformity");
+  h_uniformity->Write();
+  h2D_x_y_imon_all_norm->Write();
+  health->Close();
   return;
 }
 
@@ -409,16 +424,16 @@ int Full_Test_Analysis(const std::string &config_file= "full_config.config")
   const int ch3 = config_p->GetValue("CHANNEL3", 0);
   const int ch4 = config_p->GetValue("CHANNEL4", 0);
 
-  char *sec_head = new char[10];
-  if (sector < 10) sprintf(sec_head, "s0%d", sector);
-  else sprintf(sec_head,"s%d", sector);
+  char *sector_addon = new char[10];
+  if (sector < 10) sprintf(sector_addon, "s0%d", sector);
+  else sprintf(sector_addon,"s%d", sector);
 
-  const std::string data_dir = "../data/" + std::string(sec_head);
-  const std::string save_dir_root = "../Results/"+std::string(sec_head)+"/root_hist/";
-  const std::string save_dir_plot = "../Results/"+std::string(sec_head)+"/plots/";
-  const std::string save_dir_raw = "../Results/"+std::string(sec_head)+"/root_raw/";
+  const std::string data_dir = "../data/" + std::string(sector_addon);
+  const std::string save_dir_root = "../Results/"+std::string(sector_addon)+"/root_hist/";
+  const std::string save_dir_plot = "../Results/"+std::string(sector_addon)+"/plots/";
+  const std::string save_dir_raw = "../Results/"+std::string(sector_addon)+"/root_raw/";
 
-  bool debug = true;
+  bool debug = false;
   std::vector<std::string> filenames;
   int all_runs = 1;
   std::string test_type = "full";
