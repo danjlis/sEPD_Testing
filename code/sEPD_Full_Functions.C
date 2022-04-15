@@ -259,6 +259,7 @@ void GetFileName(std::vector<std::string> &filenames, std::string test_type, int
 std::string MakeRootFile_Full(std::string inputFileName, const std::string datadir, const std::string savedir, int ttt = 32, bool debug = false){
 
   cout << "RUNNING: make_sEPD_rootfile_v1 for " << inputFileName << " input file" << endl;
+
   if (debug) {
     cout<<"Printing Parameters: "<<endl;
     cout<<"datadir: "<<datadir<<endl;
@@ -280,6 +281,7 @@ std::string MakeRootFile_Full(std::string inputFileName, const std::string datad
   vector<Int_t> device;
   vector<Int_t> ch;
   vector<Int_t> tile;
+  vector<Float_t> temp_b, temp_c;
   vector<Float_t> imon, rmon, vcomp;
 
   std::string last_part;
@@ -293,6 +295,9 @@ std::string MakeRootFile_Full(std::string inputFileName, const std::string datad
   tr->Branch("device", &device);
   tr->Branch("channel", &ch);
   tr->Branch("tile", &tile);
+  tr->Branch("temp_b", &temp_b);
+  tr->Branch("temp_c", &temp_c);
+
   tr->Branch("imon", &imon);
   tr->Branch("rmon", &rmon);
   tr->Branch("vcomp", &vcomp);
@@ -303,7 +308,6 @@ std::string MakeRootFile_Full(std::string inputFileName, const std::string datad
   Bool_t isDiffPosition = false;
   Float_t xpos_temp = 0;
   Float_t ypos_temp = 0;
-
   while (infile)
   {
     string s;
@@ -320,6 +324,7 @@ std::string MakeRootFile_Full(std::string inputFileName, const std::string datad
       if (!getline( ss, stemp, ',' )) break;
       vec_str.push_back( stemp );
     }
+
 
     if(vec_str.size()==9){
       xpos_temp = stof(vec_str[4]);
@@ -347,6 +352,68 @@ std::string MakeRootFile_Full(std::string inputFileName, const std::string datad
       vcomp.push_back(stof(vec_str[8]));
       nLines++;
     }
+    if(vec_str.size()==11){
+      xpos_temp = stof(vec_str[4]);
+      ypos_temp = stof(vec_str[5]);
+      if (!(xpos_temp == xpos && ypos_temp == ypos)){
+        tr->Fill();
+        device.clear();
+        ch.clear();
+        tile.clear();
+        imon.clear();
+        rmon.clear();
+        vcomp.clear();
+        xpos = xpos_temp;
+        ypos = ypos_temp;
+      }
+      else {
+        xpos = xpos_temp;
+        ypos = ypos_temp;
+      }
+      device.push_back(stoi(vec_str[0]));
+      ch.push_back(stoi(vec_str[1]));
+      tile.push_back(stoi(vec_str[2]));
+      temp_b.push_back(stof(vec_str[6]));
+      temp_c.push_back(stof(vec_str[7]));
+      imon.push_back(stof(vec_str[8]));
+      rmon.push_back(stof(vec_str[9]));
+      vcomp.push_back(stof(vec_str[10]));
+      nLines++;
+    }
+    if(vec_str.size()==8){
+      xpos_temp = stof(vec_str[4]);
+      ypos_temp = stof(vec_str[5]);
+      if (!(xpos_temp == xpos && ypos_temp == ypos)){
+        tr->Fill();
+        device.clear();
+        ch.clear();
+        tile.clear();
+        temp_b.clear();
+        temp_c.clear();
+        imon.clear();
+        rmon.clear();
+        vcomp.clear();
+        xpos = xpos_temp;
+        ypos = ypos_temp;
+      }
+      else {
+        xpos = xpos_temp;
+        ypos = ypos_temp;
+      }
+      device.push_back(stoi(vec_str[0]));
+      ch.push_back(stoi(vec_str[1]));
+      tile.push_back(stoi(vec_str[2]));
+      temp_b.push_back(stof(vec_str[6]));
+      temp_c.push_back(stof(vec_str[7]));
+    }
+    if(vec_str.size()==3){
+
+      imon.push_back(stof(vec_str[0]));
+      rmon.push_back(stof(vec_str[1]));
+      vcomp.push_back(stof(vec_str[2]));
+      nLines++;
+    }
+
 
   }
 

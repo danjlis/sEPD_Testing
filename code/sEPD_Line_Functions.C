@@ -375,7 +375,7 @@ std::string MakeRootFile_Line(std::string inputFileName, const std::string datad
   vector<Int_t> device;
   vector<Int_t> ch;
   vector<Int_t> tile;
-  vector<Float_t> imon, rmon, vcomp;
+  vector<Float_t> temp_b, temp_c, imon, rmon, vcomp;
 
   std::string last_part;
   if (debug) {
@@ -391,6 +391,9 @@ std::string MakeRootFile_Line(std::string inputFileName, const std::string datad
   tr->Branch("ypos", &ypos, "xpos/F");
   tr->Branch("device", &device);
   tr->Branch("channel", &ch);
+  tr->Branch("temp_b", &temp_b);
+  tr->Branch("temp_c", &temp_c);
+
   tr->Branch("tile", &tile);
   tr->Branch("imon", &imon);
   tr->Branch("rmon", &rmon);
@@ -429,20 +432,80 @@ std::string MakeRootFile_Line(std::string inputFileName, const std::string datad
       rmon.push_back(stof(vec_str[7]));
       vcomp.push_back(stof(vec_str[8]));
       nLines++;
+      if(tile.size() == ttt){
+        if (debug){
+        //  cout<<"sample Imon: "<<vec_str[6]<<endl;
+        }
+        tr->Fill();
+        device.clear();
+        ch.clear();
+        tile.clear();
+        temp_b.clear();
+        temp_c.clear();
+        imon.clear();
+        rmon.clear();
+        vcomp.clear();
+      }
     }
 
-    if(tile.size() == ttt){
-      if (debug){
-      //  cout<<"sample Imon: "<<vec_str[6]<<endl;
+    if(vec_str.size()==11){
+      device.push_back(stoi(vec_str[0]));
+      ch.push_back(stoi(vec_str[1]));
+      tile.push_back(stoi(vec_str[2]));
+      xpos = stof(vec_str[4]);
+      ypos = stof(vec_str[5]);
+      temp_b.push_back(stof(vec_str[6]));
+      temp_c.push_back(stof(vec_str[7]));
+      imon.push_back(stof(vec_str[8]));
+      rmon.push_back(stof(vec_str[9]));
+      vcomp.push_back(stof(vec_str[10]));
+      nLines++;
+      if(tile.size() == ttt){
+        if (debug){
+        //  cout<<"sample Imon: "<<vec_str[6]<<endl;
+        }
+        tr->Fill();
+        device.clear();
+        ch.clear();
+        tile.clear();
+        temp_b.clear();
+        temp_c.clear();
+        imon.clear();
+        rmon.clear();
+        vcomp.clear();
       }
-      tr->Fill();
-      device.clear();
-      ch.clear();
-      tile.clear();
-      imon.clear();
-      rmon.clear();
-      vcomp.clear();
     }
+
+    if(vec_str.size()==8){
+      device.push_back(stoi(vec_str[0]));
+      ch.push_back(stoi(vec_str[1]));
+      tile.push_back(stoi(vec_str[2]));
+      xpos = stof(vec_str[4]);
+      ypos = stof(vec_str[5]);
+      temp_b.push_back(stof(vec_str[6]));
+      temp_c.push_back(stof(vec_str[7]));
+    }
+    if(vec_str.size()==4){
+      imon.push_back(stof(vec_str[1]));
+      rmon.push_back(stof(vec_str[2]));
+      vcomp.push_back(stof(vec_str[3]));
+      nLines++;
+      if(tile.size() == ttt){
+        if (debug){
+        //  cout<<"sample Imon: "<<vec_str[6]<<endl;
+        }
+        tr->Fill();
+        device.clear();
+        ch.clear();
+        tile.clear();
+        temp_b.clear();
+        temp_c.clear();
+        imon.clear();
+        rmon.clear();
+        vcomp.clear();
+      }
+    }
+
   }
 
   if (debug) cout << "total numer of lines analyzed = " << nLines << endl;
