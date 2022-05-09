@@ -32,4 +32,6 @@
 *.app
 
 #Root files
+*/root_hist/*
+*/root_raw/*
 *.root
